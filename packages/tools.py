@@ -3,6 +3,8 @@ from google.cloud import bigquery
 from google.oauth2 import service_account
 import pandas as pd
 from google.api_core.exceptions import BadRequest
+from dask import delayed
+import dask
 
 class ConnectionBigQuery():
     def __init__(self, path_credentials: str, project_id: str) -> None:
@@ -204,3 +206,53 @@ class ConnectionBigQuery():
         
 
         return self.result
+
+    def list_of_datasets_from_projects(self) -> list:
+
+        list_of_datasets = [x.dataset_id for x in self.client.list_datasets(project=self.project_id)]
+
+        return list_of_datasets
+
+
+    def merge_tables_from_dataset(self, dataset: str) -> pd.DataFrame:
+
+        datasets = self.client.list_tables(f'{self.project_id}.{dataset}')
+
+        list_of_tables = [x.table_id for x in datasets]
+
+        lista_dfs = []
+
+        for table in list_of_tables:
+
+            df = delayed(self.client.simple_query)(select='*', dataset=dataset,table=table)
+
+            lista_dfs.append(df)
+
+        list_dfs_total = dask.compute(lista_dfs)
+
+        df_total_all_tables = pd.concat(list_dfs_total[0])
+
+        return df_total_all_tables
+
+
+    def merge_all_datasets(self, list_of_selected_datasets: list) -> pd.DataFrame:
+
+        lista_dfs = []
+
+        for dataset in list_of_selected_datasets:
+
+            df = delayed(self.merge_tables_from_dataset)(dataset= dataset)
+
+            lista_dfs.append(df)
+
+        list_dfs_total = dask.compute(lista_dfs)
+
+        df_total_all_datasets = pd.concat(list_dfs_total[0])
+
+        return df_total_all_datasets
+
+
+    def upload_to_bigquery(self):
+        pass
+
+
