@@ -252,9 +252,9 @@ class ConnectionBigQuery():
         return df_total_all_datasets
 
 
-    def upload_to_bigquery(self, bucket_name, dataset_name, table_name):
+    def upload_to_bigquery(self, storage_client, bucket_name, dataset_name, table_name):
 
-        bucket_to_upload = storage.Bucket(sample_bucket_name)
+        bucket_to_upload = storage_client.Bucket(bucket_name)
 
         pass
 
