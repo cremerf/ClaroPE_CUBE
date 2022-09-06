@@ -3,11 +3,12 @@ from google.cloud import storage
 import os
 
 class ClaroPath():
-    def __init__(self, bucket_name: str) -> None:
+    def __init__(self, bucket_name: str, working_dir: str) -> None:
 
         self.bucket_name = bucket_name
         self.dataset_name = ""
         self.table_name = ""
+        self.working_dir = working_dir
 
         # Directorio base de la carpeta del proyecto. La que contiene a todos los archivos
 
@@ -19,8 +20,15 @@ class ClaroPath():
 
         self.client = storage.Client.from_service_account_json(json_credentials_path = self.CREDENTIALS_DIR)
 
-        self.BUCKET_DIR = self.client.get_bucket(bucket_or_name = bucket_name)
+        self.BUCKET = self.set_bucket()
 
+    def set_bucket(self):
+
+        if not self.client.get_bucket(bucket_or_name = self.bucket_name).exists():
+            self.client.create_bucket(bucket_or_name = self.bucket_name)
+
+        else:
+            self.client.get_bucket(bucket_or_name = self.bucket_name)
 
     def set_bucket_name(self, new_bucket_name) -> None:
         self.bucket_name = new_bucket_name
