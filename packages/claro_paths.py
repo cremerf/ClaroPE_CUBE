@@ -17,7 +17,7 @@ class ClaroPath():
 
         self.CREDENTIALS_DIR = os.path.join(self.BASE_DIR, 'credentials.json')
 
-        self.client = storage.Client(credentials = self.CREDENTIALS_DIR)
+        self.client = storage.Client.from_service_account_json(json_credentials_path = self.CREDENTIALS_DIR)
 
         self.BUCKET_DIR = self.client.get_bucket(bucket_or_name = bucket_name)
 
