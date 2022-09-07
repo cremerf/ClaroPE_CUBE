@@ -1,3 +1,4 @@
+from fileinput import filename
 from http.client import BAD_REQUEST
 from google.cloud import bigquery
 from google.oauth2 import service_account
@@ -5,6 +6,8 @@ import pandas as pd
 from google.api_core.exceptions import BadRequest
 from dask import delayed
 import dask
+from packages.claro_paths import ClaroPath
+import functools as ft
 
 class ConnectionBigQuery():
     def __init__(self, path_credentials: str, project_id: str) -> None:
@@ -224,7 +227,7 @@ class ConnectionBigQuery():
 
         for table in list_of_tables:
 
-            df = delayed(self.client.simple_query)(select='*', dataset=dataset,table=table)
+            df = delayed(self.simple_query)(select='*', dataset=dataset,table=table)
 
             lista_dfs.append(df)
 
@@ -236,27 +239,48 @@ class ConnectionBigQuery():
 
 
     def merge_all_datasets(self, list_of_selected_datasets: list) -> pd.DataFrame:
+        print("The MERGE has started. LETS GO AGAIN")
 
-        lista_dfs = []
+        df_final = pd.DataFrame()
 
         for dataset in list_of_selected_datasets:
+            print(f"{dataset} is going to be merged")
+            df = self.merge_tables_from_dataset(dataset= dataset)
+            print(f"{dataset} merged")
+            df_final = pd.concat([df_final, df])
 
-            df = delayed(self.merge_tables_from_dataset)(dataset= dataset)
-
-            lista_dfs.append(df)
-
-        list_dfs_total = dask.compute(lista_dfs)
-
-        df_total_all_datasets = pd.concat(list_dfs_total[0])
-
-        return df_total_all_datasets
+        print("Full dataset merged")
+        return df_final
 
 
-    def upload_to_bigquery(self, storage_client, bucket_name, dataset_name, table_name):
+    def upload_table_to_bigquery(self, bucket_name, working_dir_name, file, dataset_name, table_name, dataframe: pd.DataFrame):
 
-        bucket_to_upload = storage_client.Bucket(bucket_name)
+        PATHS = ClaroPath(bucket_name= bucket_name, working_dir_name= working_dir_name)
+        
+        folder = PATHS.BUCKET.blob(f'{working_dir_name}/{table_name}')
 
-        pass
+        folder.upload_from_filename(filename= file)
+
+        # Define BigQuery dataset and table
+
+        # Chequear de nuevo metodo load_table_from_dataframe() ya tiene un parametro que crea automaticamente la tabla si no existe
+        try: 
+            dataset = self.client.get_dataset(dataset_name)
+
+        except:
+            dataset = self.client.create_dataset(dataset_name)
+        
+        try:
+            table = self.client.get_table(f"{self.project_id}.{dataset_name}.{table_name}")
+        
+        except:
+            table = self.client.create_table(f"{self.project_id}.{dataset_name}.{table_name}")
+        
+        upload_to_bq = self.client.load_table_from_dataframe(dataframe= dataframe, destination= f"{self.project_id}.{dataset_name}.{table_name}")
+
+        upload_to_bq.result()
+
+
 
 
 
