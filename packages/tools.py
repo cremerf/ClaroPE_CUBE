@@ -217,7 +217,7 @@ class ConnectionBigQuery():
         return list_of_datasets
 
 
-    def merge_tables_from_dataset(self, dataset: str, columns:list) -> pd.DataFrame:
+    def merge_tables_from_dataset(self, dataset: str, columns:str) -> pd.DataFrame:
 
         datasets = self.client.list_tables(f'{self.project_id}.{dataset}')
 
@@ -227,7 +227,7 @@ class ConnectionBigQuery():
 
         for table in list_of_tables:
 
-            df = delayed(self.simple_query)(select='*', dataset=dataset,table=table)
+            df = delayed(self.simple_query)(select=columns, dataset=dataset,table=table)
             if columns:
                 df = df.loc[:, columns]
                 
@@ -240,7 +240,7 @@ class ConnectionBigQuery():
         return df_total_all_tables
 
 
-    def merge_all_datasets(self, list_of_selected_datasets: list, columns:list) -> pd.DataFrame:
+    def merge_all_datasets(self, list_of_selected_datasets: list, columns:str) -> pd.DataFrame:
         print("The MERGE has started. LETS GO AGAIN")
 
         df_final = pd.DataFrame()
